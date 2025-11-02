@@ -25,3 +25,11 @@ class TorchBackend:
     def to_numpy(self, input_tensor):
         """Convert back to numpy for interop with Tinygrad core."""
         return input_tensor.cpu().detach().numpy()
+# --- Non-class helper for stride-accurate view creation ---
+
+def as_view(base: torch.Tensor, shape: tuple[int, ...], strides_elems: tuple[int, ...]):
+    """
+    Return a non-contiguous view over `base` using element strides.
+    This avoids unnecessary .contiguous() calls and matches Tinygrad's element-based stride logic.
+    """
+    return torch.as_strided(base, size=shape, stride=strides_elems)
