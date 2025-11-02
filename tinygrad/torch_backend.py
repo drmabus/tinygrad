@@ -1,8 +1,7 @@
-# torch_backend.py
-# WIP: Torch backend for stride-accurate tensor handling
-# Part of bounty PR #13041
-
+# tinygrad/torch_backend.py
+from typing import Tuple
 import torch
+
 
 class TorchBackend:
     def __init__(self):
@@ -12,24 +11,26 @@ class TorchBackend:
         """Wrap raw data into a torch tensor."""
         return torch.tensor(data, device=self.device)
 
-    def as_strided(self, input_tensor, size, stride):
+    def as_strided(self, input_tensor: torch.Tensor, size, stride):
         """Accurate stride view logic to replace .contiguous() hacks."""
-        return torch.as_strided(input_tensor, size, stride)
+        return torch.as_strided(input_tensor, size=size, stride=stride)
 
-    def contiguous(self, input_tensor):
-        """Gracefully handle contiguous behavior."""
+    def contiguous(self, input_tensor: torch.Tensor):
+        """Use stride-safe behavior instead of forcing a clone()."""
         if input_tensor.is_contiguous():
             return input_tensor
-        return input_tensor.clone().detach()
+        shape = tuple(input_tensor.shape)
+        strides = tuple(input_tensor.stride())
+        return torch.as_strided(input_tensor, size=shape, stride=strides)
 
-    def to_numpy(self, input_tensor):
+    def to_numpy(self, input_tensor: torch.Tensor):
         """Convert back to numpy for interop with Tinygrad core."""
         return input_tensor.cpu().detach().numpy()
-# --- Non-class helper for stride-accurate view creation ---
 
-def as_view(base: torch.Tensor, shape: tuple[int, ...], strides_elems: tuple[int, ...]):
-    """
-    Return a non-contiguous view over `base` using element strides.
-    This avoids unnecessary .contiguous() calls and matches Tinygrad's element-based stride logic.
-    """
+
+def as_view(base: torch.Tensor,
+           shape: Tuple[int, ...],
+           strides_elems: Tuple[int, ...]) -> torch.Tensor:
+    """Return a non-contiguous view over `base` using element strides."""
     return torch.as_strided(base, size=shape, stride=strides_elems)
+

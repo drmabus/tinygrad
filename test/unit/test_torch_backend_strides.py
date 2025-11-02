@@ -1,4 +1,9 @@
-import torch
+import pytest
+torch = pytest.importorskip("torch", reason="PyTorch not available on this runner")
+
+from tinygrad.torch_backend import TorchBackend, as_view
+
+
 
 
 def as_view(base: torch.Tensor, shape, strides):
